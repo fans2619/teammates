@@ -50,14 +50,16 @@ export const EXAMPLE_ESSAY_QUESTION_MODEL: QuestionEditFormModel = {
   isQuestionHasResponses: false,
 
   questionNumber: 1,
-  questionBrief: '',
-  questionDescription: '',
+  questionBrief: 'Something here',
+  questionDescription: '<p><strong>This question is </strong>'
+    + '<span style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0);"><strong>1234567</strong></span>'
+    + '<strong>!</strong></p>',
   questionType: FeedbackQuestionType.TEXT,
   questionDetails: DEFAULT_TEXT_QUESTION_DETAILS(),
 
   isDeleting: false,
   isDuplicating: false,
-  isEditable: false,
+  isEditable: true,
   isSaving: false,
   isCollapsed: false,
   isVisibilityChanged: false,
