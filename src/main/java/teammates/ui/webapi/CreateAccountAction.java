@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 
 import org.apache.http.HttpStatus;
 
+import teammates.common.datatransfer.AccountRequestStatus;
 import teammates.common.datatransfer.DataBundle;
 import teammates.common.datatransfer.attributes.AccountRequestAttributes;
 import teammates.common.datatransfer.attributes.InstructorAttributes;
@@ -59,18 +60,23 @@ class CreateAccountAction extends Action {
                     + registrationKey + " could not be found");
         }
 
-        if (accountRequestAttributes.getRegisteredAt() != null) {
+        if (accountRequestAttributes.hasRegistrationKeyBeenUsedToJoin()) {
             throw new InvalidOperationException("The registration key " + registrationKey + " has already been used.");
+        }
+
+        if (!accountRequestAttributes.canRegistrationKeyBeUseToJoin()) {
+            throw new InvalidOperationException("The registration key " + registrationKey + " cannot be used."
+                    + " The account request may not have been approved.");
         }
 
         String instructorEmail = accountRequestAttributes.getEmail();
         String instructorName = accountRequestAttributes.getName();
-        String instructorInstitution = accountRequestAttributes.getInstitute();
+        String instructorInstitute = accountRequestAttributes.getInstitute();
 
         String courseId;
 
         try {
-            courseId = importDemoData(instructorEmail, instructorName, instructorInstitution, timezone);
+            courseId = importDemoData(instructorEmail, instructorName, instructorInstitute, timezone);
         } catch (InvalidParametersException ipe) {
             // There should not be any invalid parameter here
             log.severe("Unexpected error", ipe);
@@ -94,10 +100,11 @@ class CreateAccountAction extends Action {
 
         try {
             logic.updateAccountRequest(AccountRequestAttributes
-                    .updateOptionsBuilder(instructorEmail, instructorInstitution)
+                    .updateOptionsBuilder(instructorEmail, instructorInstitute)
+                    .withStatus(AccountRequestStatus.REGISTERED)
                     .withRegisteredAt(Instant.now())
                     .build());
-        } catch (EntityDoesNotExistException | InvalidParametersException e) {
+        } catch (EntityDoesNotExistException | InvalidParametersException | EntityAlreadyExistsException e) {
             // EntityDoesNotExistException should not be thrown as existence of account request has been validated before.
             // InvalidParametersException should not be thrown as there should not be any invalid parameters.
             log.severe("Unexpected error", e);

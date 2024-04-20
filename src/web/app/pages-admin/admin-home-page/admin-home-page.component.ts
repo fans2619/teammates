@@ -111,7 +111,10 @@ export class AdminHomePageComponent {
     this.accountService.createAccountRequest({
       instructorEmail: instructor.email,
       instructorName: instructor.name,
-      instructorInstitution: instructor.institution,
+      instructorInstitute: instructor.institution, // including country
+      instructorCountry: '',
+      instructorHomePageUrl: '',
+      comments: '',
     })
         .pipe(finalize(() => {
           this.isAddingInstructors = false;
@@ -122,6 +125,7 @@ export class AdminHomePageComponent {
           instructor.joinLink = resp.joinLink;
           this.activeRequests -= 1;
         }, (resp: ErrorMessageOutput) => {
+          // resp should not be of type AccountRequestCreateErrorResultsWrapper for ADMIN_CREATE
           instructor.status = 'FAIL';
           instructor.statusCode = resp.status;
           instructor.message = resp.error.message;

@@ -157,6 +157,10 @@ public final class Const {
 
         public static final String ENTITY_TYPE = "entitytype";
 
+        public static final String ACCOUNT_REQUEST_TYPE = "accountrequesttype";
+        public static final String ACCOUNT_REQUESTS_START_TIME = "starttime";
+        public static final String ACCOUNT_REQUESTS_END_TIME = "endtime";
+
         public static final String INTENT = "intent";
 
         public static final String TIMEZONE = "timezone";
@@ -322,6 +326,8 @@ public final class Const {
         public static final String ACCOUNT = URI_PREFIX + "/account";
         public static final String ACCOUNT_RESET = URI_PREFIX + "/account/reset";
         public static final String ACCOUNT_REQUEST = URI_PREFIX + "/account/request";
+        public static final String ACCOUNT_REQUESTS = URI_PREFIX + "/account/requests";
+        public static final String ACCOUNT_REQUEST_STATUS = ACCOUNT_REQUEST + "/status";
         public static final String ACCOUNT_REQUEST_RESET = ACCOUNT_REQUEST + "/reset";
         public static final String ACCOUNTS = URI_PREFIX + "/accounts";
         public static final String RESPONSE_COMMENT = URI_PREFIX + "/responsecomment";

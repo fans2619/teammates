@@ -11,7 +11,9 @@ import java.util.stream.Collectors;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.LoadType;
 
+import teammates.common.datatransfer.AccountRequestStatus;
 import teammates.common.datatransfer.attributes.AccountRequestAttributes;
+import teammates.common.exception.EntityAlreadyExistsException;
 import teammates.common.exception.EntityDoesNotExistException;
 import teammates.common.exception.InvalidParametersException;
 import teammates.common.exception.SearchServiceException;
@@ -70,35 +72,88 @@ public final class AccountRequestsDb extends EntitiesDb<AccountRequest, AccountR
         assert email != null;
         assert institute != null;
 
-        return makeAttributesOrNull(getAccountRequestEntity(AccountRequest.generateId(email, institute)));
+        return makeAttributesOrNull(getAccountRequestEntity(email, institute));
+    }
+
+    /**
+     * Gets all account requests with status {@code AccountRequestStatus.SUBMITTED}.
+     */
+    public List<AccountRequestAttributes> getAccountRequestsWithStatusSubmitted() {
+        return makeAttributes(getAccountRequestEntitiesWithStatusSubmitted());
+    }
+
+    /**
+     * Gets all account requests with {@code createdAt} timestamp between {@code startTime} and {@code endTime}.
+     */
+    public List<AccountRequestAttributes> getAccountRequestsSubmittedWithinPeriod(Instant startTime, Instant endTime) {
+        assert startTime != null;
+        assert endTime != null;
+
+        return makeAttributes(getAccountRequestEntitiesSubmittedWithinPeriod(startTime, endTime));
+    }
+
+    /**
+     * Gets all account requests. This method is only used in testing.
+     */
+    public List<AccountRequestAttributes> getAllAccountRequests() {
+        return makeAttributes(getAllAccountRequestEntities());
     }
 
     /**
      * Updates an account request.
      *
+     * <p>If the email or institute of the account request is changed, it will be re-created.
+     *
      * @return the updated account request
-     * @throws InvalidParametersException if the account request is not valid
-     * @throws EntityDoesNotExistException if the account request cannot be found
+     * @throws InvalidParametersException if the new account request is not valid
+     * @throws EntityDoesNotExistException if the account request to update cannot be found
+     * @throws EntityAlreadyExistsException if the account request cannot be updated by re-creation because
+     *                                      of an existing account request
      */
     public AccountRequestAttributes updateAccountRequest(AccountRequestAttributes.UpdateOptions updateOptions)
-            throws InvalidParametersException, EntityDoesNotExistException {
+            throws InvalidParametersException, EntityDoesNotExistException, EntityAlreadyExistsException {
         assert updateOptions != null;
 
-        AccountRequestAttributes accountRequest = getAccountRequest(updateOptions.getEmail(), updateOptions.getInstitute());
+        AccountRequest accountRequest = getAccountRequestEntity(updateOptions.getEmail(), updateOptions.getInstitute());
         if (accountRequest == null) {
             throw new EntityDoesNotExistException(ERROR_UPDATE_NON_EXISTENT + updateOptions);
         }
 
-        accountRequest.update(updateOptions);
-        accountRequest.sanitizeForSaving();
+        AccountRequestAttributes newAccountRequestAttributes = makeAttributes(accountRequest);
+        newAccountRequestAttributes.update(updateOptions);
 
-        if (!accountRequest.isValid()) {
-            throw new InvalidParametersException(accountRequest.getInvalidityInfo());
+        newAccountRequestAttributes.sanitizeForSaving();
+        if (!newAccountRequestAttributes.isValid()) {
+            throw new InvalidParametersException(newAccountRequestAttributes.getInvalidityInfo());
         }
 
-        saveEntity(accountRequest.toEntity());
+        boolean isEmailOrInstituteChanged = !accountRequest.getEmail().equals(newAccountRequestAttributes.getEmail())
+                || !accountRequest.getInstitute().equals(newAccountRequestAttributes.getInstitute());
 
-        return accountRequest;
+        if (isEmailOrInstituteChanged) {
+            // re-create the updated account request
+            newAccountRequestAttributes = createEntity(newAccountRequestAttributes);
+            // delete the old account request
+            deleteAccountRequest(accountRequest.getEmail(), accountRequest.getInstitute());
+        } else {
+            // update only if change
+            boolean hasSameAttributes = hasSameValue(accountRequest.getName(), newAccountRequestAttributes.getName())
+                    && hasSameValue(accountRequest.getHomePageUrl(), newAccountRequestAttributes.getHomePageUrl())
+                    && hasSameValue(accountRequest.getComments(), newAccountRequestAttributes.getComments())
+                    && hasSameValue(accountRequest.getStatus(), newAccountRequestAttributes.getStatus())
+                    && hasSameValue(accountRequest.getLastProcessedAt(), newAccountRequestAttributes.getLastProcessedAt())
+                    && hasSameValue(accountRequest.getRegisteredAt(), newAccountRequestAttributes.getRegisteredAt());
+            if (hasSameAttributes) {
+                // reset to the exact old account request
+                newAccountRequestAttributes = makeAttributes(accountRequest);
+                log.info(String.format(
+                        OPTIMIZED_SAVING_POLICY_APPLIED, AccountRequest.class.getSimpleName(), updateOptions));
+            } else {
+                saveEntity(newAccountRequestAttributes.toEntity());
+            }
+        }
+
+        return newAccountRequestAttributes;
     }
 
     /**
@@ -125,6 +180,27 @@ public final class AccountRequestsDb extends EntitiesDb<AccountRequest, AccountR
 
     private AccountRequest getAccountRequestEntity(String id) {
         return load().id(id).now();
+    }
+
+    private AccountRequest getAccountRequestEntity(String email, String institute) {
+        return getAccountRequestEntity(AccountRequest.generateId(email, institute));
+    }
+
+    private List<AccountRequest> getAccountRequestEntitiesWithStatusSubmitted() {
+        return load()
+                .filter("status", AccountRequestStatus.SUBMITTED)
+                .list();
+    }
+
+    private List<AccountRequest> getAccountRequestEntitiesSubmittedWithinPeriod(Instant startTime, Instant endTime) {
+        return load()
+                .filter("createdAt >=", startTime)
+                .filter("createdAt <", endTime)
+                .list();
+    }
+
+    private List<AccountRequest> getAllAccountRequestEntities() {
+        return load().list();
     }
 
     /**
@@ -168,6 +244,9 @@ public final class AccountRequestsDb extends EntitiesDb<AccountRequest, AccountR
      * Gets the number of account requests created within a specified time range.
      */
     public int getNumAccountRequestsByTimeRange(Instant startTime, Instant endTime) {
+        assert startTime != null;
+        assert endTime != null;
+
         return load()
                 .filter("createdAt >=", startTime)
                 .filter("createdAt <", endTime)

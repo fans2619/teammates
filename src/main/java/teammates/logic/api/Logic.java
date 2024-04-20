@@ -1527,20 +1527,89 @@ public class Logic {
     }
 
     /**
+     * Creates an account request and approves it instantly.
+     *
+     * <p>Preconditions:</p>
+     * * All parameters are non-null.
+     *
+     * @return the created account request
+     * @throws InvalidParametersException if the account request is not valid
+     * @throws EntityAlreadyExistsException if the account request already exists
+     */
+    public AccountRequestAttributes createAndApproveAccountRequest(AccountRequestAttributes accountRequest)
+            throws InvalidParametersException, EntityAlreadyExistsException {
+        assert accountRequest != null;
+
+        return accountRequestsLogic.createAndApproveAccountRequest(accountRequest);
+    }
+
+    /**
      * Updates an account request.
      *
      * <p>Preconditions:</p>
      * * All parameters are non-null.
      *
      * @return the updated account request
-     * @throws InvalidParametersException if the account request is not valid
+     * @throws InvalidParametersException if the new account request is not valid
      * @throws EntityDoesNotExistException if the account request to update does not exist
+     * @throws EntityAlreadyExistsException if the account request cannot be updated because of an existing account request
      */
     public AccountRequestAttributes updateAccountRequest(AccountRequestAttributes.UpdateOptions updateOptions)
-            throws InvalidParametersException, EntityDoesNotExistException {
+            throws InvalidParametersException, EntityDoesNotExistException, EntityAlreadyExistsException {
         assert updateOptions != null;
 
         return accountRequestsLogic.updateAccountRequest(updateOptions);
+    }
+
+    /**
+     * Approves an account request.
+     *
+     * <p>Preconditions:</p>
+     * * All parameters are non-null.
+     *
+     * @return the updated account request
+     * @throws EntityDoesNotExistException if the account request to approve does not exist
+     */
+    public AccountRequestAttributes approveAccountRequest(String email, String institute)
+            throws EntityDoesNotExistException {
+        assert email != null;
+        assert institute != null;
+
+        return accountRequestsLogic.approveAccountRequest(email, institute);
+    }
+
+    /**
+     * Rejects an account request.
+     *
+     * <p>Preconditions:</p>
+     * * All parameters are non-null.
+     *
+     * @return the updated account request
+     * @throws EntityDoesNotExistException if the account request to reject does not exist
+     */
+    public AccountRequestAttributes rejectAccountRequest(String email, String institute)
+            throws EntityDoesNotExistException {
+        assert email != null;
+        assert institute != null;
+
+        return accountRequestsLogic.rejectAccountRequest(email, institute);
+    }
+
+    /**
+     * Resets an account request.
+     *
+     * <p>Preconditions:</p>
+     * * All parameters are non-null.
+     *
+     * @return the updated account request
+     * @throws EntityDoesNotExistException if the account request to reset does not exist
+     */
+    public AccountRequestAttributes resetAccountRequest(String email, String institute)
+            throws EntityDoesNotExistException {
+        assert email != null;
+        assert institute != null;
+
+        return accountRequestsLogic.resetAccountRequest(email, institute);
     }
 
     /**
@@ -1551,6 +1620,7 @@ public class Logic {
      */
     public void deleteAccountRequest(String email, String institute) {
         assert email != null;
+        assert institute != null;
 
         accountRequestsLogic.deleteAccountRequest(email, institute);
     }
@@ -1582,6 +1652,27 @@ public class Logic {
         assert institute != null;
 
         return accountRequestsLogic.getAccountRequest(email, institute);
+    }
+
+    /**
+     * Gets all account requests pending processing.
+     *
+     * @return the list of all account requests pending processing or an empty list if not found.
+     */
+    public List<AccountRequestAttributes> getAccountRequestsPendingProcessing() {
+        return accountRequestsLogic.getAccountRequestsPendingProcessing();
+    }
+
+    /**
+     * Gets all account requests submitted between {@code startTime} and {@code endTime}.
+     *
+     * @return the list of all account requests submitted within the period or an empty list if not found.
+     */
+    public List<AccountRequestAttributes> getAccountRequestsSubmittedWithinPeriod(Instant startTime, Instant endTime) {
+        assert startTime != null;
+        assert endTime != null;
+
+        return accountRequestsLogic.getAccountRequestsSubmittedWithinPeriod(startTime, endTime);
     }
 
     /**

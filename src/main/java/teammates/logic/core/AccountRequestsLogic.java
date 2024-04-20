@@ -3,6 +3,7 @@ package teammates.logic.core;
 import java.time.Instant;
 import java.util.List;
 
+import teammates.common.datatransfer.AccountRequestStatus;
 import teammates.common.datatransfer.attributes.AccountRequestAttributes;
 import teammates.common.exception.EntityAlreadyExistsException;
 import teammates.common.exception.EntityDoesNotExistException;
@@ -32,18 +33,6 @@ public final class AccountRequestsLogic {
     }
 
     /**
-     * Updates an account request.
-     *
-     * @return the updated account request
-     * @throws InvalidParametersException if the account request is not valid
-     * @throws EntityDoesNotExistException if the account request to update does not exist
-     */
-    public AccountRequestAttributes updateAccountRequest(AccountRequestAttributes.UpdateOptions updateOptions)
-            throws InvalidParametersException, EntityDoesNotExistException {
-        return accountRequestsDb.updateAccountRequest(updateOptions);
-    }
-
-    /**
      * Creates an account request.
      *
      * @return the created account request
@@ -53,6 +42,95 @@ public final class AccountRequestsLogic {
     public AccountRequestAttributes createAccountRequest(AccountRequestAttributes accountRequest)
             throws InvalidParametersException, EntityAlreadyExistsException {
         return accountRequestsDb.createEntity(accountRequest);
+    }
+
+    /**
+     * Creates an account request and approves it instantly.
+     *
+     * @return the created account request
+     * @throws InvalidParametersException if the account request is not valid
+     * @throws EntityAlreadyExistsException if the account request to create already exists
+     */
+    public AccountRequestAttributes createAndApproveAccountRequest(AccountRequestAttributes accountRequest)
+            throws InvalidParametersException, EntityAlreadyExistsException {
+        assert accountRequest != null;
+
+        accountRequest.setCreatedAt(Instant.now());
+        accountRequest.update(AccountRequestAttributes
+                .updateOptionsBuilder(accountRequest.getEmail(), accountRequest.getInstitute())
+                .withStatus(AccountRequestStatus.APPROVED)
+                .withLastProcessedAt(accountRequest.getCreatedAt())
+                .build());
+
+        return accountRequestsDb.createEntity(accountRequest);
+    }
+
+    /**
+     * Updates an account request.
+     *
+     * @return the updated account request
+     * @throws InvalidParametersException if the new account request is not valid
+     * @throws EntityDoesNotExistException if the account request to update does not exist
+     * @throws EntityAlreadyExistsException if the account request cannot be updated because of an existing account request
+     */
+    public AccountRequestAttributes updateAccountRequest(AccountRequestAttributes.UpdateOptions updateOptions)
+            throws InvalidParametersException, EntityDoesNotExistException, EntityAlreadyExistsException {
+        return accountRequestsDb.updateAccountRequest(updateOptions);
+    }
+
+    /**
+     * Approves the account request associated with the email address and institute.
+     *
+     * @throws EntityDoesNotExistException if the account request to approve does not exist
+     */
+    public AccountRequestAttributes approveAccountRequest(String email, String institute)
+            throws EntityDoesNotExistException {
+        try {
+            return updateAccountRequest(AccountRequestAttributes.updateOptionsBuilder(email, institute)
+                    .withStatus(AccountRequestStatus.APPROVED)
+                    .withLastProcessedAt(Instant.now())
+                    .build());
+        } catch (InvalidParametersException | EntityAlreadyExistsException e) {
+            throw new AssertionError("Approving an account request should not cause " + e.getClass().getSimpleName()
+                    + ". Error details: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Rejects the account request associated with the email address and institute.
+     *
+     * @throws EntityDoesNotExistException if the account request to reject does not exist
+     */
+    public AccountRequestAttributes rejectAccountRequest(String email, String institute)
+            throws EntityDoesNotExistException {
+        try {
+            return updateAccountRequest(AccountRequestAttributes.updateOptionsBuilder(email, institute)
+                    .withStatus(AccountRequestStatus.REJECTED)
+                    .withLastProcessedAt(Instant.now())
+                    .build());
+        } catch (InvalidParametersException | EntityAlreadyExistsException e) {
+            throw new AssertionError("Rejecting an account request should not cause " + e.getClass().getSimpleName()
+                    + ". Error details: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Resets the status of the account request associated with the email address and institute back to SUBMITTED.
+     *
+     * @throws EntityDoesNotExistException if the account request to reset does not exist
+     */
+    public AccountRequestAttributes resetAccountRequest(String email, String institute)
+            throws EntityDoesNotExistException {
+        try {
+            return updateAccountRequest(AccountRequestAttributes.updateOptionsBuilder(email, institute)
+                    .withStatus(AccountRequestStatus.SUBMITTED)
+                    .withLastProcessedAt(Instant.now())
+                    .withRegisteredAt(null)
+                    .build());
+        } catch (InvalidParametersException | EntityAlreadyExistsException e) {
+            throw new AssertionError("Resetting an account request should not cause " + e.getClass().getSimpleName()
+                    + ". Error details: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -71,6 +149,24 @@ public final class AccountRequestsLogic {
      */
     public AccountRequestAttributes getAccountRequest(String email, String institute) {
         return accountRequestsDb.getAccountRequest(email, institute);
+    }
+
+    /**
+     * Gets all account requests pending processing.
+     *
+     * @return the list of all account requests pending processing or an empty list if not found.
+     */
+    public List<AccountRequestAttributes> getAccountRequestsPendingProcessing() {
+        return accountRequestsDb.getAccountRequestsWithStatusSubmitted();
+    }
+
+    /**
+     * Gets all account requests submitted between {@code startTime} and {@code endTime}.
+     *
+     * @return the list of all account requests submitted within the period or an empty list if not found.
+     */
+    public List<AccountRequestAttributes> getAccountRequestsSubmittedWithinPeriod(Instant startTime, Instant endTime) {
+        return accountRequestsDb.getAccountRequestsSubmittedWithinPeriod(startTime, endTime);
     }
 
     /**

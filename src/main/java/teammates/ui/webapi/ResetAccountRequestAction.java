@@ -1,8 +1,12 @@
 package teammates.ui.webapi;
 
+import java.time.Instant;
+
 import org.apache.http.HttpStatus;
 
+import teammates.common.datatransfer.AccountRequestStatus;
 import teammates.common.datatransfer.attributes.AccountRequestAttributes;
+import teammates.common.exception.EntityAlreadyExistsException;
 import teammates.common.exception.EntityDoesNotExistException;
 import teammates.common.exception.InvalidParametersException;
 import teammates.common.util.Const;
@@ -19,26 +23,28 @@ class ResetAccountRequestAction extends AdminOnlyAction {
 
     @Override
     public JsonResult execute() throws InvalidOperationException {
-        String instructorEmail = getNonNullRequestParamValue(Const.ParamsNames.INSTRUCTOR_EMAIL);
+        String email = getNonNullRequestParamValue(Const.ParamsNames.INSTRUCTOR_EMAIL);
         String institute = getNonNullRequestParamValue(Const.ParamsNames.INSTRUCTOR_INSTITUTION);
 
-        AccountRequestAttributes accountRequest = logic.getAccountRequest(instructorEmail, institute);
+        AccountRequestAttributes accountRequest = logic.getAccountRequest(email, institute);
 
         if (accountRequest == null) {
-            throw new EntityNotFoundException("Account request for instructor with email: " + instructorEmail
+            throw new EntityNotFoundException("Account request with email: " + email
                     + " and institute: " + institute + " does not exist.");
         }
 
-        if (accountRequest.getRegisteredAt() == null) {
+        if (!accountRequest.hasRegistrationKeyBeenUsedToJoin()) {
             throw new InvalidOperationException("Unable to reset account request as instructor is still unregistered.");
         }
 
         try {
             accountRequest = logic.updateAccountRequest(AccountRequestAttributes
-                .updateOptionsBuilder(instructorEmail, institute)
+                .updateOptionsBuilder(email, institute)
+                .withStatus(AccountRequestStatus.APPROVED)
+                .withLastProcessedAt(Instant.now())
                 .withRegisteredAt(null)
                 .build());
-        } catch (InvalidParametersException | EntityDoesNotExistException e) {
+        } catch (InvalidParametersException | EntityDoesNotExistException | EntityAlreadyExistsException e) {
             // InvalidParametersException should not be thrown as validity of params verified when fetching entity.
             // EntityDoesNoExistException shuold not be thrown as existence of entity has just been validated.
             log.severe("Unexpected error", e);
@@ -46,9 +52,9 @@ class ResetAccountRequestAction extends AdminOnlyAction {
         }
 
         String joinLink = accountRequest.getRegistrationUrl();
-        EmailWrapper email = emailGenerator.generateNewInstructorAccountJoinEmail(
+        EmailWrapper joinEmail = emailGenerator.generateNewInstructorAccountJoinEmail(
                 accountRequest.getEmail(), accountRequest.getName(), joinLink);
-        emailSender.sendEmail(email);
+        emailSender.sendEmail(joinEmail);
 
         JoinLinkData output = new JoinLinkData(joinLink);
         return new JsonResult(output);

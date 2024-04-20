@@ -44,10 +44,8 @@ public final class ActionFactory {
         map(ResourceURIs.ACCOUNT, GET, GetAccountAction.class);
         map(ResourceURIs.ACCOUNT, POST, CreateAccountAction.class);
         map(ResourceURIs.ACCOUNT, DELETE, DeleteAccountAction.class);
+        // TODO: This endpoint and action should no longer be used
         map(ResourceURIs.ACCOUNT_RESET, PUT, ResetAccountAction.class);
-        map(ResourceURIs.ACCOUNT_REQUEST, GET, GetAccountRequestAction.class);
-        map(ResourceURIs.ACCOUNT_REQUEST, POST, CreateAccountRequestAction.class);
-        map(ResourceURIs.ACCOUNT_REQUEST, DELETE, DeleteAccountRequestAction.class);
         map(ResourceURIs.ACCOUNT_REQUEST_RESET, PUT, ResetAccountRequestAction.class);
         map(ResourceURIs.ACCOUNTS, GET, GetAccountsAction.class);
         map(ResourceURIs.COURSE, GET, GetCourseAction.class);
@@ -70,6 +68,18 @@ public final class ActionFactory {
         map(ResourceURIs.RESPONSE_COMMENT, PUT, UpdateFeedbackResponseCommentAction.class);
         map(ResourceURIs.RESPONSE_COMMENT, DELETE, DeleteFeedbackResponseCommentAction.class);
         map(ResourceURIs.RESULT, GET, GetSessionResultsAction.class);
+
+        // ACCOUNT REQUEST APIs
+        map(ResourceURIs.ACCOUNT_REQUEST, GET, GetAccountRequestAction.class);
+        map(ResourceURIs.ACCOUNT_REQUEST, POST, CreateAccountRequestAction.class);
+        map(ResourceURIs.ACCOUNT_REQUEST, PUT, UpdateAccountRequestAction.class);
+        map(ResourceURIs.ACCOUNT_REQUEST, DELETE, DeleteAccountRequestAction.class);
+
+        // ACCOUNT REQUEST STATUS API
+        map(ResourceURIs.ACCOUNT_REQUEST_STATUS, PUT, UpdateAccountRequestStatusAction.class);
+
+        // ACCOUNT REQUESTS API
+        map(ResourceURIs.ACCOUNT_REQUESTS, GET, GetAccountRequestsAction.class);
 
         //STUDENTS APIs
         map(ResourceURIs.STUDENTS, GET, GetStudentsAction.class);
