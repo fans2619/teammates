@@ -1527,6 +1527,23 @@ public class Logic {
     }
 
     /**
+     * Creates an account request and approves it instantly.
+     *
+     * <p>Preconditions:</p>
+     * * All parameters are non-null.
+     *
+     * @return the created account request
+     * @throws InvalidParametersException if the account request is not valid
+     * @throws EntityAlreadyExistsException if the account request already exists
+     */
+    public AccountRequestAttributes createAndApproveAccountRequest(AccountRequestAttributes accountRequest)
+            throws InvalidParametersException, EntityAlreadyExistsException, EntityDoesNotExistException {
+        assert accountRequest != null;
+
+        return accountRequestsLogic.createAndApproveAccountRequest(accountRequest);
+    }
+
+    /**
      * Updates an account request.
      *
      * <p>Preconditions:</p>
@@ -1551,6 +1568,7 @@ public class Logic {
      */
     public void deleteAccountRequest(String email, String institute) {
         assert email != null;
+        assert institute != null;
 
         accountRequestsLogic.deleteAccountRequest(email, institute);
     }
